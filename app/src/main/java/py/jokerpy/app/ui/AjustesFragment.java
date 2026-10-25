@@ -13,10 +13,11 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
 import py.jokerpy.app.R;
+import py.jokerpy.app.util.BloqueadorAnuncios;
 import py.jokerpy.app.util.Hilos;
 import py.jokerpy.app.util.Respaldo;
 
-// Opciones: bloqueador, navegador externo y respaldo de la lista.
+// Opciones: navegacion y respaldo de la lista.
 public class AjustesFragment extends PreferenceFragmentCompat {
 
     private final ActivityResultLauncher<String> crearArchivo = registerForActivityResult(
@@ -33,17 +34,17 @@ public class AjustesFragment extends PreferenceFragmentCompat {
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.preferencias, rootKey);
 
-        Preference exportar = findPreference("exportar");
-        if (exportar != null) {
-            exportar.setOnPreferenceClickListener(p -> {
-                avisarSiFalla(() -> crearArchivo.launch("jokerpy-sitios.json"));
-                return true;
-            });
-        }
-        Preference importar = findPreference("importar");
-        if (importar != null) {
-            importar.setOnPreferenceClickListener(p -> {
-                avisarSiFalla(() -> abrirArchivo.launch(new String[]{"*/*"}));
+        alTocar("exportar", () -> avisarSiFalla(() -> crearArchivo.launch("jokerpy-sitios.json")));
+        alTocar("importar", () -> avisarSiFalla(() -> abrirArchivo.launch(new String[]{"*/*"})));
+        alTocar("actualizar_anuncios", this::actualizarAnuncios);
+    }
+
+    // Asocia una accion al toque de una opcion.
+    private void alTocar(String clave, Runnable accion) {
+        Preference p = findPreference(clave);
+        if (p != null) {
+            p.setOnPreferenceClickListener(x -> {
+                accion.run();
                 return true;
             });
         }
@@ -56,6 +57,20 @@ public class AjustesFragment extends PreferenceFragmentCompat {
         } catch (Exception e) {
             Toast.makeText(requireContext(), R.string.sin_selector, Toast.LENGTH_LONG).show();
         }
+    }
+
+    // Descarga una lista de anuncios mas completa.
+    private void actualizarAnuncios() {
+        final Context app = requireContext().getApplicationContext();
+        mensaje(app, "Actualizando la lista…");
+        Hilos.IO.execute(() -> {
+            try {
+                int n = BloqueadorAnuncios.actualizar(app);
+                mensaje(app, "Lista actualizada: " + n + " dominios");
+            } catch (Exception e) {
+                mensaje(app, "No se pudo actualizar la lista");
+            }
+        });
     }
 
     // Guarda la lista en el archivo elegido.

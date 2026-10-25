@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.JokerPy" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#85B7EB</item>
+        <item name="colorOnPrimary">#0C447C</item>
+        <item name="colorSecondary">#378ADD</item>
+    </style>
+</resources>

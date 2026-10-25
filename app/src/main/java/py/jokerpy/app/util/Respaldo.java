@@ -35,6 +35,7 @@ public final class Respaldo {
             o.put("nombre", s.nombre);
             o.put("url", s.url);
             o.put("favorito", s.favorito);
+            o.put("escritorio", s.escritorio);
             arreglo.put(o);
         }
         JSONObject raiz = new JSONObject();
@@ -68,6 +69,7 @@ public final class Respaldo {
         for (Sitio s : dao.lista()) existentes.add(clave(s.url));
 
         List<Long> nuevos = new ArrayList<>();
+        long siguienteOrden = dao.maxOrden();
         for (int i = 0; i < arreglo.length(); i++) {
             JSONObject o = arreglo.optJSONObject(i);
             if (o == null) continue;
@@ -79,6 +81,8 @@ public final class Respaldo {
             s.nombre = nombre;
             s.url = url;
             s.favorito = o.optBoolean("favorito", false);
+            s.escritorio = o.optBoolean("escritorio", false);
+            s.orden = ++siguienteOrden;
             nuevos.add(dao.insertar(s));
         }
 

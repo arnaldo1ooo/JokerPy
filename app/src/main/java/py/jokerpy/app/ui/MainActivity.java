@@ -8,14 +8,22 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -34,7 +42,15 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
     private SitioAdapter adaptador;
     private List<Sitio> todos = new ArrayList<>();
     private EditText buscar;
-    private TextView vacio;
+    private Chip chipTodos;
+    private Chip chipFavoritos;
+    private Chip chipRecientes;
+    private View vacio;
+    private TextView vacioTitulo;
+    private TextView vacioAyuda;
+    private RecyclerView lista;
+    private ImageButton btnOrdenar;
+    private boolean modoOrdenar = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,14 +60,21 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
         Precarga.ejecutarSiHaceFalta(this);
 
         buscar = findViewById(R.id.buscar);
+        chipTodos = findViewById(R.id.chipTodos);
+        chipFavoritos = findViewById(R.id.chipFavoritos);
+        chipRecientes = findViewById(R.id.chipRecientes);
         vacio = findViewById(R.id.vacio);
+        vacioTitulo = findViewById(R.id.vacioTitulo);
+        vacioAyuda = findViewById(R.id.vacioAyuda);
+        lista = findViewById(R.id.lista);
+        btnOrdenar = findViewById(R.id.btnOrdenar);
 
         // Cuantas columnas entran segun el ancho de la pantalla.
-        int columnas = Math.max(2, getResources().getConfiguration().screenWidthDp / 150);
-        RecyclerView lista = findViewById(R.id.lista);
+        int columnas = Math.max(2, getResources().getConfiguration().screenWidthDp / 160);
         lista.setLayoutManager(new GridLayoutManager(this, columnas));
         adaptador = new SitioAdapter(this);
         lista.setAdapter(adaptador);
+        prepararArrastre();
 
         AppDatabase.get(this).sitioDao().todos().observe(this, sitios -> {
             todos = sitios;
@@ -73,29 +96,137 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
             }
         });
 
+        ChipGroup chips = findViewById(R.id.chips);
+        chips.setOnCheckedStateChangeListener((grupo, ids) -> filtrar());
+
         findViewById(R.id.btnAgregar).setOnClickListener(v ->
                 startActivity(new Intent(this, AgregarActivity.class)));
         findViewById(R.id.btnAjustes).setOnClickListener(v ->
                 startActivity(new Intent(this, AjustesActivity.class)));
+        btnOrdenar.setOnClickListener(v -> alternarOrdenar());
     }
 
-    // Muestra solo los sitios que coinciden con la busqueda.
+    // Permite arrastrar las tarjetas para cambiar su orden.
+    private void prepararArrastre() {
+        ItemTouchHelper ayudante = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.UP | ItemTouchHelper.DOWN | ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0) {
+            @Override
+            public boolean isLongPressDragEnabled() {
+                return modoOrdenar;
+            }
+
+            @Override
+            public boolean onMove(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder desde,
+                                  @NonNull RecyclerView.ViewHolder hasta) {
+                int a = desde.getBindingAdapterPosition();
+                int b = hasta.getBindingAdapterPosition();
+                if (a < 0 || b < 0) return false;
+                List<Sitio> actual = adaptador.getLista();
+                // Los favoritos y los demas se ordenan por separado.
+                if (actual.get(a).favorito != actual.get(b).favorito) return false;
+                adaptador.mover(a, b);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder v, int direccion) {
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView r, @NonNull RecyclerView.ViewHolder v) {
+                super.clearView(r, v);
+                if (modoOrdenar) guardarOrden(new ArrayList<>(adaptador.getLista()));
+            }
+        });
+        ayudante.attachToRecyclerView(lista);
+    }
+
+    // Entra o sale del modo ordenar.
+    private void alternarOrdenar() {
+        if (modoOrdenar) {
+            salirModoOrdenar();
+            return;
+        }
+        boolean hayFiltro = !buscar.getText().toString().trim().isEmpty() || !chipTodos.isChecked();
+        if (hayFiltro) {
+            Toast.makeText(this, "Quita la búsqueda y los filtros para ordenar", Toast.LENGTH_LONG).show();
+            return;
+        }
+        modoOrdenar = true;
+        adaptador.setModoOrdenar(true);
+        btnOrdenar.setSelected(true);
+        Toast.makeText(this, "Mantén presionado un sitio y arrástralo. Toca el ícono otra vez para terminar.",
+                Toast.LENGTH_LONG).show();
+    }
+
+    private void salirModoOrdenar() {
+        modoOrdenar = false;
+        adaptador.setModoOrdenar(false);
+        btnOrdenar.setSelected(false);
+    }
+
+    // Guarda el orden actual de la lista completa.
+    private void guardarOrden(List<Sitio> ordenada) {
+        final AppDatabase db = AppDatabase.get(getApplicationContext());
+        Hilos.IO.execute(() -> db.runInTransaction(() -> {
+            SitioDao dao = db.sitioDao();
+            for (int i = 0; i < ordenada.size(); i++) {
+                dao.ponerOrden(ordenada.get(i).id, i + 1);
+            }
+        }));
+    }
+
+    // Muestra solo los sitios que coinciden con la busqueda y el filtro.
     private void filtrar() {
         String q = buscar.getText().toString().trim().toLowerCase(Locale.ROOT);
+        boolean soloFavoritos = chipFavoritos.isChecked();
+        boolean soloRecientes = chipRecientes.isChecked();
+
+        List<Sitio> base = new ArrayList<>(todos);
+        if (soloRecientes) {
+            List<Sitio> abiertos = new ArrayList<>();
+            for (Sitio s : base) {
+                if (s.ultimoAcceso > 0) abiertos.add(s);
+            }
+            Collections.sort(abiertos, (a, b) -> Long.compare(b.ultimoAcceso, a.ultimoAcceso));
+            base = abiertos.size() > 12 ? new ArrayList<>(abiertos.subList(0, 12)) : abiertos;
+        }
+
         List<Sitio> visibles = new ArrayList<>();
-        for (Sitio s : todos) {
+        for (Sitio s : base) {
+            if (soloFavoritos && !s.favorito) continue;
             boolean coincide = q.isEmpty()
                     || (s.nombre != null && s.nombre.toLowerCase(Locale.ROOT).contains(q))
                     || (s.url != null && s.url.toLowerCase(Locale.ROOT).contains(q));
             if (coincide) visibles.add(s);
         }
+
+        boolean hayFiltro = !q.isEmpty() || soloFavoritos || soloRecientes;
+        if (modoOrdenar && hayFiltro) salirModoOrdenar();
         adaptador.setDatos(visibles);
-        vacio.setVisibility(todos.isEmpty() ? View.VISIBLE : View.GONE);
+
+        boolean sinResultados = visibles.isEmpty();
+        vacio.setVisibility(sinResultados ? View.VISIBLE : View.GONE);
+        lista.setVisibility(sinResultados ? View.GONE : View.VISIBLE);
+        if (sinResultados && soloRecientes && !todos.isEmpty()) {
+            vacioTitulo.setText(R.string.recientes);
+            vacioAyuda.setText(R.string.sin_recientes);
+        } else if (sinResultados && soloFavoritos && !todos.isEmpty()) {
+            vacioTitulo.setText(R.string.favoritos);
+            vacioAyuda.setText(R.string.sin_favoritos);
+        } else {
+            vacioTitulo.setText(R.string.sin_sitios);
+            vacioAyuda.setText(R.string.sin_sitios_ayuda);
+        }
     }
 
     // Abre el sitio en el navegador interno o en el externo.
     @Override
     public void abrir(Sitio sitio) {
+        final long id = sitio.id;
+        Hilos.IO.execute(() -> AppDatabase.get(getApplicationContext())
+                .sitioDao().marcarAbierto(id, System.currentTimeMillis()));
+
         if (Ajustes.abrirExterno(this)) {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(sitio.url)));
@@ -106,19 +237,26 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
         }
         Intent i = new Intent(this, NavegadorActivity.class);
         i.putExtra(NavegadorActivity.EXTRA_URL, sitio.url);
+        i.putExtra(NavegadorActivity.EXTRA_ESCRITORIO, sitio.escritorio);
         startActivity(i);
     }
 
     // Menu con las acciones de un sitio (pulsacion larga).
     @Override
     public void opciones(Sitio sitio) {
+        mostrarOpciones(sitio);
+    }
+
+    private void mostrarOpciones(Sitio sitio) {
         String[] acciones = {
                 "Editar",
                 sitio.favorito ? "Quitar de favoritos" : "Marcar como favorito",
+                "Mover antes",
+                "Mover después",
                 "Actualizar icono de la página",
                 "Eliminar"
         };
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(sitio.nombre)
                 .setItems(acciones, (d, cual) -> {
                     switch (cual) {
@@ -131,6 +269,12 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
                             cambiarFavorito(sitio);
                             break;
                         case 2:
+                            moverSitio(sitio, -1);
+                            break;
+                        case 3:
+                            moverSitio(sitio, 1);
+                            break;
+                        case 4:
                             Hilos.IO.execute(() -> IconoHelper.refrescarIconoWeb(getApplicationContext(), sitio.id));
                             break;
                         default:
@@ -138,6 +282,26 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
                     }
                 })
                 .show();
+    }
+
+    // Cambia un sitio de lugar con su vecino (sirve tambien con control remoto).
+    private void moverSitio(Sitio sitio, int paso) {
+        List<Sitio> completa = new ArrayList<>(todos);
+        int i = -1;
+        for (int k = 0; k < completa.size(); k++) {
+            if (completa.get(k).id == sitio.id) {
+                i = k;
+                break;
+            }
+        }
+        int j = i + paso;
+        if (i < 0 || j < 0 || j >= completa.size()
+                || completa.get(i).favorito != completa.get(j).favorito) {
+            Toast.makeText(this, paso < 0 ? "Ya está al principio" : "Ya está al final", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        Collections.swap(completa, i, j);
+        guardarOrden(completa);
     }
 
     // Marca o desmarca un sitio como favorito.
@@ -153,7 +317,7 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
 
     // Pregunta antes de borrar un sitio.
     private void confirmarEliminar(Sitio sitio) {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle("Eliminar " + sitio.nombre)
                 .setMessage("Se quitará de tu lista.")
                 .setNegativeButton(R.string.cancelar, null)

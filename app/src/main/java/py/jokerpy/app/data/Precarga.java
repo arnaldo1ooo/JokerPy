@@ -33,6 +33,7 @@ public final class Precarga {
                     Sitio s = new Sitio();
                     s.nombre = o.getString("nombre");
                     s.url = o.getString("url");
+                    s.orden = i + 1;
                     ids.add(dao.insertar(s));
                 }
                 Ajustes.marcarPrecargado(app);

@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'py.jokerpy.app'
-    compileSdk 34
+    compileSdk 37
 
     defaultConfig {
         applicationId "py.jokerpy.app"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 5
+        versionName "1.1.0"
     }
 
     buildTypes {

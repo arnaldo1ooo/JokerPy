@@ -32,3 +32,25 @@ Build > Build Bundle(s) / APK(s) > Build APK(s). Queda en `app/build/outputs/apk
 ## Antes de publicar
 - Revisa que cada URL de `canales.json` sea la página oficial del canal.
 - Cambia `applicationId` en `app/build.gradle` si quieres otro identificador.
+
+## Novedades de la versión 1.1
+- Diseño más moderno: tarjetas redondeadas, logo en el menú, botón flotante "Agregar sitio", chips Todos/Favoritos y buscador redondeado.
+- El título JokerPy ya no se corta (los botones de texto pasaron a íconos).
+- Botón de retroceder en el navegador interno (con recargar y cerrar), y flecha de volver en Agregar y Ajustes.
+- Tema oscuro automático y foco más visible con el control remoto.
+
+## Novedades de la versión 1.2
+- Al escribir o pegar la dirección en "Agregar sitio", la app busca la página y sugiere el título y el icono (queda editable).
+- Si no eliges un icono propio, al guardar se usa el icono de la página que ya se había bajado.
+
+## Novedades de la versión 1.3
+- Modo escritorio por sitio (interruptor en Agregar/Editar sitio).
+- Reordenar: ícono de flechas arriba (arrastrar con pulsación larga) o "Mover antes/después" en el menú del sitio (sirve con control remoto).
+- Chip "Recientes" con los últimos sitios abiertos.
+- Imagen en imagen en el navegador (botón en la barra y automática al salir con un video en marcha). Se desactiva en Ajustes > Navegación.
+- Ajustes > Navegación > "Actualizar lista de anuncios": descarga una lista más completa.
+- Cursor con el control remoto en TV: flechas mueven el cursor, OK toca, el botón de cursor (o la tecla Menú) lo activa o desactiva. Al llegar arriba del todo, la flecha arriba pasa a la barra.
+- La base de datos se actualiza sola: no se pierden los sitios que ya tienes.
+
+## Versión 1.3.1
+- Se quitó la opción de PIN.

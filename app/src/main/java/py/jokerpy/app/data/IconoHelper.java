@@ -19,11 +19,17 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-// Busca, baja y guarda los iconos de los sitios.
+// Busca, baja y guarda los iconos y titulos de los sitios.
 public final class IconoHelper {
     private static final String AGENTE = "Mozilla/5.0 (Linux; Android 11) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36";
     private static final int MAX_BYTES = 2 * 1024 * 1024;
     private static final int TAMANO = 256;
+
+    // Lo que se averigua de una pagina: su titulo y su icono.
+    public static class Pagina {
+        public String titulo;
+        public Bitmap icono;
+    }
 
     private IconoHelper() {
     }
@@ -33,7 +39,7 @@ public final class IconoHelper {
         SitioDao dao = AppDatabase.get(ctx).sitioDao();
         Sitio sitio = dao.buscar(idSitio);
         if (sitio == null) return;
-        Bitmap bmp = bajarIcono(sitio.url);
+        Bitmap bmp = leerPagina(sitio.url).icono;
         if (bmp == null) return;
         String ruta = guardar(ctx, bmp, "web_" + idSitio);
         if (ruta == null) return;
@@ -42,14 +48,34 @@ public final class IconoHelper {
         dao.actualizar(sitio);
     }
 
-    // Busca el icono en la pagina y, si no hay, prueba con favicon.ico.
-    private static Bitmap bajarIcono(String paginaUrl) {
-        List<String> candidatos = new ArrayList<>();
+    // Lee la pagina una sola vez y devuelve su titulo y su icono.
+    public static Pagina leerPagina(String paginaUrl) {
+        Pagina pagina = new Pagina();
+        Document doc = null;
         try {
-            String delaPagina = buscarEnPagina(paginaUrl);
-            if (delaPagina != null) candidatos.add(delaPagina);
+            doc = Jsoup.connect(paginaUrl).userAgent(AGENTE).timeout(8000).get();
         } catch (Exception ignorado) {
-            // se prueba con favicon.ico
+            // sin pagina se prueba solo con favicon.ico
+        }
+        if (doc != null) pagina.titulo = buscarTitulo(doc);
+        pagina.icono = bajarIcono(doc, paginaUrl);
+        return pagina;
+    }
+
+    // Usa el nombre del sitio si lo declara y, si no, el titulo de la pagina.
+    private static String buscarTitulo(Document doc) {
+        String nombre = doc.select("meta[property=og:site_name]").attr("content").trim();
+        if (nombre.isEmpty()) nombre = doc.title().trim();
+        if (nombre.length() > 40) nombre = nombre.substring(0, 40).trim();
+        return nombre.isEmpty() ? null : nombre;
+    }
+
+    // Busca el icono en la pagina y, si no hay, prueba con favicon.ico.
+    private static Bitmap bajarIcono(Document doc, String paginaUrl) {
+        List<String> candidatos = new ArrayList<>();
+        if (doc != null) {
+            String delaPagina = elegirIcono(doc);
+            if (delaPagina != null) candidatos.add(delaPagina);
         }
         try {
             candidatos.add(new URL(new URL(paginaUrl), "/favicon.ico").toString());
@@ -70,8 +96,7 @@ public final class IconoHelper {
     }
 
     // Elige el icono mas grande declarado en la pagina.
-    private static String buscarEnPagina(String paginaUrl) throws Exception {
-        Document doc = Jsoup.connect(paginaUrl).userAgent(AGENTE).timeout(8000).get();
+    private static String elegirIcono(Document doc) {
         String mejor = null;
         int mejorTamano = -1;
         for (Element link : doc.select("link[rel~=(?i)icon]")) {

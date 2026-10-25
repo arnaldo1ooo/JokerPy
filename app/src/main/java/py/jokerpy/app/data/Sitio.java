@@ -1,5 +1,6 @@
 package py.jokerpy.app.data;
 
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
 
@@ -13,4 +14,13 @@ public class Sitio {
     public String iconoPropio; // ruta del icono elegido por el usuario
     public String iconoWeb;    // ruta del icono bajado de la pagina
     public boolean favorito;
+
+    @ColumnInfo(defaultValue = "0")
+    public boolean escritorio; // abrir como pagina de escritorio
+
+    @ColumnInfo(defaultValue = "0")
+    public long orden;         // posicion elegida por el usuario
+
+    @ColumnInfo(defaultValue = "0")
+    public long ultimoAcceso;  // cuando se abrio por ultima vez
 }

@@ -9,6 +9,8 @@ import androidx.preference.PreferenceManager;
 public final class Ajustes {
     public static final String BLOQUEAR = "bloquear_anuncios";
     public static final String EXTERNO = "abrir_externo";
+    public static final String PIP = "pip_activado";
+    public static final String CURSOR_TV = "cursor_tv";
     private static final String PRECARGADO = "precargado";
 
     private Ajustes() {
@@ -26,6 +28,16 @@ public final class Ajustes {
     // Dice si los sitios se abren en el navegador externo.
     public static boolean abrirExterno(Context c) {
         return prefs(c).getBoolean(EXTERNO, false);
+    }
+
+    // Dice si la imagen en imagen esta permitida.
+    public static boolean pipActivado(Context c) {
+        return prefs(c).getBoolean(PIP, true);
+    }
+
+    // Dice si se usa el cursor con el control remoto en la TV.
+    public static boolean cursorTv(Context c) {
+        return prefs(c).getBoolean(CURSOR_TV, true);
     }
 
     // Dice si ya se cargaron los canales iniciales.

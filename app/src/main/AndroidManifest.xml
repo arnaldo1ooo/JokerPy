@@ -33,6 +33,7 @@
         <activity android:name=".ui.AjustesActivity" android:exported="false" />
         <activity
             android:name=".ui.NavegadorActivity"
+            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
             android:exported="false" />
     </application>

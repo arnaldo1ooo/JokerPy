@@ -13,6 +13,7 @@ public class AjustesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ajustes);
+        findViewById(R.id.btnVolver).setOnClickListener(v -> finish());
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .replace(R.id.contenedor, new AjustesFragment())

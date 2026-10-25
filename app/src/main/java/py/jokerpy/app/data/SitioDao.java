@@ -13,16 +13,28 @@ import java.util.List;
 @Dao
 public interface SitioDao {
 
-    // Todos los sitios: favoritos primero, luego por nombre.
-    @Query("SELECT * FROM sitio ORDER BY favorito DESC, nombre COLLATE NOCASE ASC")
+    // Todos los sitios: favoritos primero, luego en el orden elegido.
+    @Query("SELECT * FROM sitio ORDER BY favorito DESC, orden ASC, nombre COLLATE NOCASE ASC")
     LiveData<List<Sitio>> todos();
 
-    // Lista simple de todos los sitios (para el respaldo).
-    @Query("SELECT * FROM sitio ORDER BY nombre COLLATE NOCASE ASC")
+    // Lista simple en el mismo orden (para el respaldo).
+    @Query("SELECT * FROM sitio ORDER BY favorito DESC, orden ASC, nombre COLLATE NOCASE ASC")
     List<Sitio> lista();
 
     @Query("SELECT * FROM sitio WHERE id = :id")
     Sitio buscar(long id);
+
+    // Ultimo numero de orden usado.
+    @Query("SELECT COALESCE(MAX(orden), 0) FROM sitio")
+    long maxOrden();
+
+    // Guarda la posicion de un sitio.
+    @Query("UPDATE sitio SET orden = :orden WHERE id = :id")
+    void ponerOrden(long id, long orden);
+
+    // Anota cuando se abrio un sitio.
+    @Query("UPDATE sitio SET ultimoAcceso = :cuando WHERE id = :id")
+    void marcarAbierto(long id, long cuando);
 
     @Insert
     long insertar(Sitio sitio);
