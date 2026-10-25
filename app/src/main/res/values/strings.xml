@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">JokerPy</string>
+    <string name="agregar_sitio">Agregar sitio</string>
+    <string name="ajustes">Ajustes</string>
+    <string name="buscar">Buscar</string>
+    <string name="sin_sitios">Todavía no hay sitios. Agrega uno para empezar.</string>
+    <string name="nombre">Nombre</string>
+    <string name="direccion">Dirección web</string>
+    <string name="cambiar_icono">Cambiar icono</string>
+    <string name="usar_icono_pagina">Usar el de la página</string>
+    <string name="guardar">Guardar</string>
+    <string name="cancelar">Cancelar</string>
+    <string name="editar_sitio">Editar sitio</string>
+    <string name="bloquear_anuncios">Bloquear anuncios</string>
+    <string name="bloquear_anuncios_resumen">Filtra los dominios de publicidad al navegar</string>
+    <string name="abrir_externo">Abrir en el navegador externo</string>
+    <string name="abrir_externo_resumen">Usa el navegador del dispositivo en lugar del interno</string>
+    <string name="respaldo">Respaldo</string>
+    <string name="exportar">Exportar lista</string>
+    <string name="exportar_resumen">Guarda tus sitios en un archivo</string>
+    <string name="importar">Importar lista</string>
+    <string name="importar_resumen">Agrega los sitios de un archivo guardado antes</string>
+    <string name="sin_selector">Este dispositivo no tiene selector de archivos</string>
+</resources>

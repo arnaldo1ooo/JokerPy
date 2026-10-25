@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+    <SwitchPreferenceCompat
+        app:key="bloquear_anuncios"
+        app:defaultValue="true"
+        app:title="@string/bloquear_anuncios"
+        app:summary="@string/bloquear_anuncios_resumen" />
+    <SwitchPreferenceCompat
+        app:key="abrir_externo"
+        app:defaultValue="false"
+        app:title="@string/abrir_externo"
+        app:summary="@string/abrir_externo_resumen" />
+    <PreferenceCategory app:title="@string/respaldo">
+        <Preference
+            app:key="exportar"
+            app:title="@string/exportar"
+            app:summary="@string/exportar_resumen" />
+        <Preference
+            app:key="importar"
+            app:title="@string/importar"
+            app:summary="@string/importar_resumen" />
+    </PreferenceCategory>
+</PreferenceScreen>
