@@ -57,7 +57,7 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Bordes.aplicar(this, findViewById(android.R.id.content), Bordes.temaClaro(this));
+        Bordes.aplicar(this, false);
 
         Precarga.ejecutarSiHaceFalta(this);
 

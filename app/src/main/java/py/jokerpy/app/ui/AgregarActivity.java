@@ -72,7 +72,7 @@ public class AgregarActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_agregar);
-        Bordes.aplicar(this, findViewById(android.R.id.content), Bordes.temaClaro(this));
+        Bordes.aplicar(this, false);
 
         campoNombre = findViewById(R.id.campoNombre);
         campoUrl = findViewById(R.id.campoUrl);

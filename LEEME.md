@@ -61,3 +61,4 @@ Build > Build Bundle(s) / APK(s) > Build APK(s). Queda en `app/build/outputs/apk
 ## Correcciones recientes
 - Agregar sitio: la búsqueda del título e icono ya no deja la pantalla esperando. Tiene tiempo límite, se cancela al guardar y, si no hay nombre, se usa el de la dirección.
 - Agregar sitio: ahora se ve una barra de carga bajo la dirección y un círculo girando sobre el icono mientras se busca el título.
+- Márgenes de las barras del sistema: ahora usa EdgeToEdge de AndroidX (sin métodos obsoletos).

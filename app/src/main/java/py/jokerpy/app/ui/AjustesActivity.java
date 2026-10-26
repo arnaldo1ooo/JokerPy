@@ -14,7 +14,7 @@ public class AjustesActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ajustes);
-        Bordes.aplicar(this, findViewById(android.R.id.content), Bordes.temaClaro(this));
+        Bordes.aplicar(this, false);
         findViewById(R.id.btnVolver).setOnClickListener(v -> finish());
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()

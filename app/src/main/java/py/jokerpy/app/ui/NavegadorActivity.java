@@ -75,7 +75,7 @@ public class NavegadorActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navegador);
         getWindow().getDecorView().setBackgroundColor(android.graphics.Color.BLACK);
-        Bordes.aplicar(this, findViewById(android.R.id.content), false);
+        Bordes.aplicar(this, true);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         String url = getIntent().getStringExtra(EXTRA_URL);
