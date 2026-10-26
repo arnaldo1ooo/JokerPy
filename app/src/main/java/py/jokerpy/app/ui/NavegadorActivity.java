@@ -42,6 +42,7 @@ import java.io.ByteArrayInputStream;
 import py.jokerpy.app.R;
 import py.jokerpy.app.util.Ajustes;
 import py.jokerpy.app.util.BloqueadorAnuncios;
+import py.jokerpy.app.util.Bordes;
 
 // Navegador interno: barra superior, anuncios bloqueados, video a pantalla completa,
 // imagen en imagen, modo escritorio y cursor para el control remoto.
@@ -73,6 +74,8 @@ public class NavegadorActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navegador);
+        getWindow().getDecorView().setBackgroundColor(android.graphics.Color.BLACK);
+        Bordes.aplicar(this, findViewById(android.R.id.content), false);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         String url = getIntent().getStringExtra(EXTRA_URL);

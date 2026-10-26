@@ -34,6 +34,7 @@ import py.jokerpy.app.data.Precarga;
 import py.jokerpy.app.data.Sitio;
 import py.jokerpy.app.data.SitioDao;
 import py.jokerpy.app.util.Ajustes;
+import py.jokerpy.app.util.Bordes;
 import py.jokerpy.app.util.Hilos;
 
 // Pantalla principal: menu con todos los sitios.
@@ -56,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Bordes.aplicar(this, findViewById(android.R.id.content), Bordes.temaClaro(this));
 
         Precarga.ejecutarSiHaceFalta(this);
 

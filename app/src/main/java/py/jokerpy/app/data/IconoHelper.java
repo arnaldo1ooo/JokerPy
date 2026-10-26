@@ -51,14 +51,15 @@ public final class IconoHelper {
     // Lee la pagina una sola vez y devuelve su titulo y su icono.
     public static Pagina leerPagina(String paginaUrl) {
         Pagina pagina = new Pagina();
+        final long limite = System.currentTimeMillis() + 12000; // no esperar mas de esto
         Document doc = null;
         try {
-            doc = Jsoup.connect(paginaUrl).userAgent(AGENTE).timeout(8000).get();
+            doc = Jsoup.connect(paginaUrl).userAgent(AGENTE).timeout(5000).maxBodySize(1024 * 1024).get();
         } catch (Exception ignorado) {
             // sin pagina se prueba solo con favicon.ico
         }
         if (doc != null) pagina.titulo = buscarTitulo(doc);
-        pagina.icono = bajarIcono(doc, paginaUrl);
+        pagina.icono = bajarIcono(doc, paginaUrl, limite);
         return pagina;
     }
 
@@ -71,7 +72,7 @@ public final class IconoHelper {
     }
 
     // Busca el icono en la pagina y, si no hay, prueba con favicon.ico.
-    private static Bitmap bajarIcono(Document doc, String paginaUrl) {
+    private static Bitmap bajarIcono(Document doc, String paginaUrl, long limite) {
         List<String> candidatos = new ArrayList<>();
         if (doc != null) {
             String delaPagina = elegirIcono(doc);
@@ -83,16 +84,29 @@ public final class IconoHelper {
             // direccion invalida
         }
         for (String url : candidatos) {
+            if (System.currentTimeMillis() > limite) break;
             try {
                 byte[] datos = bajar(url);
                 if (datos == null) continue;
-                Bitmap bmp = BitmapFactory.decodeByteArray(datos, 0, datos.length);
+                Bitmap bmp = decodificar(datos);
                 if (bmp != null) return bmp;
             } catch (Exception ignorado) {
                 // se prueba el siguiente
             }
         }
         return null;
+    }
+
+    // Abre la imagen achicandola si es muy grande.
+    private static Bitmap decodificar(byte[] datos) {
+        BitmapFactory.Options medir = new BitmapFactory.Options();
+        medir.inJustDecodeBounds = true;
+        BitmapFactory.decodeByteArray(datos, 0, datos.length, medir);
+        int mayor = Math.max(medir.outWidth, medir.outHeight);
+        BitmapFactory.Options abrir = new BitmapFactory.Options();
+        abrir.inSampleSize = 1;
+        while (mayor / abrir.inSampleSize > 1024) abrir.inSampleSize *= 2;
+        return BitmapFactory.decodeByteArray(datos, 0, datos.length, abrir);
     }
 
     // Elige el icono mas grande declarado en la pagina.
@@ -121,8 +135,8 @@ public final class IconoHelper {
     // Descarga un archivo pequeno de internet.
     private static byte[] bajar(String direccion) throws Exception {
         HttpURLConnection con = (HttpURLConnection) new URL(direccion).openConnection();
-        con.setConnectTimeout(8000);
-        con.setReadTimeout(8000);
+        con.setConnectTimeout(5000);
+        con.setReadTimeout(5000);
         con.setRequestProperty("User-Agent", AGENTE);
         try (InputStream in = con.getInputStream()) {
             ByteArrayOutputStream salida = new ByteArrayOutputStream();

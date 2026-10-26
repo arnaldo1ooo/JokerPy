@@ -9,7 +9,6 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Patterns;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
@@ -23,23 +22,28 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.Locale;
 
 import py.jokerpy.app.R;
 import py.jokerpy.app.data.AppDatabase;
 import py.jokerpy.app.data.IconoHelper;
 import py.jokerpy.app.data.Sitio;
 import py.jokerpy.app.data.SitioDao;
+import py.jokerpy.app.util.Bordes;
 import py.jokerpy.app.util.Hilos;
 
 // Formulario para agregar o editar un sitio.
 public class AgregarActivity extends AppCompatActivity {
     public static final String EXTRA_ID = "id";
     private static final long ESPERA_MS = 900;
+    private static final long AVISO_LENTO_MS = 8000;
 
     private EditText campoNombre;
     private EditText campoUrl;
     private ImageView vistaIcono;
     private TextView estado;
+    private View cargando;
+    private View progresoIcono;
     private CompoundButton switchEscritorio;
 
     private long idEdicion = -1;
@@ -57,6 +61,7 @@ public class AgregarActivity extends AppCompatActivity {
 
     private final Handler manejador = new Handler(Looper.getMainLooper());
     private final Runnable consultar = this::consultarPagina;
+    private final Runnable avisoLento = this::avisarBusquedaLenta;
 
     private final ActivityResultLauncher<String> selector = registerForActivityResult(
             new ActivityResultContracts.GetContent(), uri -> {
@@ -67,11 +72,14 @@ public class AgregarActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_agregar);
+        Bordes.aplicar(this, findViewById(android.R.id.content), Bordes.temaClaro(this));
 
         campoNombre = findViewById(R.id.campoNombre);
         campoUrl = findViewById(R.id.campoUrl);
         vistaIcono = findViewById(R.id.vistaIcono);
         estado = findViewById(R.id.estado);
+        cargando = findViewById(R.id.cargando);
+        progresoIcono = findViewById(R.id.progresoIcono);
         switchEscritorio = findViewById(R.id.switchEscritorio);
         findViewById(R.id.btnVolver).setOnClickListener(v -> finish());
 
@@ -124,21 +132,44 @@ public class AgregarActivity extends AppCompatActivity {
         findViewById(R.id.btnGuardar).setOnClickListener(v -> guardar());
     }
 
-    // Busca el titulo y el icono de la pagina para sugerirlos.
+    // Busca el titulo y el icono de la pagina para sugerirlos (sin frenar la pantalla).
     private void consultarPagina() {
         final String url = normalizar(campoUrl.getText().toString());
         if (url == null || url.equals(ultimaConsulta)) return;
         ultimaConsulta = url;
         final int mia = ++solicitud;
-        estado.setVisibility(View.VISIBLE);
-        Hilos.IO.execute(() -> {
+        estado.setText(R.string.buscando_info);
+        mostrarCarga(true);
+        manejador.removeCallbacks(avisoLento);
+        manejador.postDelayed(avisoLento, AVISO_LENTO_MS);
+        Hilos.RED.execute(() -> {
             IconoHelper.Pagina pagina = IconoHelper.leerPagina(url);
             runOnUiThread(() -> {
                 if (isFinishing() || isDestroyed() || mia != solicitud) return;
-                estado.setVisibility(View.GONE);
+                manejador.removeCallbacks(avisoLento);
+                mostrarCarga(false);
                 aplicarSugerencia(url, pagina);
             });
         });
+    }
+
+    // Si la pagina tarda, avisa que se puede guardar igual.
+    private void avisarBusquedaLenta() {
+        estado.setText(R.string.busqueda_lenta);
+    }
+
+    // Deja de esperar el resultado de la busqueda.
+    private void cancelarBusqueda() {
+        solicitud++;
+        manejador.removeCallbacks(consultar);
+        manejador.removeCallbacks(avisoLento);
+        mostrarCarga(false);
+    }
+
+    // Muestra u oculta el indicador de carga (barra y circulo sobre el icono).
+    private void mostrarCarga(boolean activa) {
+        cargando.setVisibility(activa ? View.VISIBLE : View.GONE);
+        progresoIcono.setVisibility(activa && iconoPropio == null ? View.VISIBLE : View.GONE);
     }
 
     // Pone el titulo y el icono encontrados, sin pisar lo que eligio el usuario.
@@ -197,27 +228,39 @@ public class AgregarActivity extends AppCompatActivity {
         });
     }
 
-    // Agrega https:// si falta y revisa que sea una direccion valida.
+    // Agrega https:// si falta y revisa de forma simple que sea una direccion valida.
     private String normalizar(String texto) {
         String t = texto.trim();
-        if (t.isEmpty()) return null;
-        if (!t.matches("(?i)^https?://.*")) t = "https://" + t;
-        return Patterns.WEB_URL.matcher(t).matches() ? t : null;
+        if (t.isEmpty() || t.contains(" ")) return null;
+        String minusculas = t.toLowerCase(Locale.ROOT);
+        if (!minusculas.startsWith("http://") && !minusculas.startsWith("https://")) t = "https://" + t;
+        String host = Uri.parse(t).getHost();
+        if (host == null || !host.contains(".") || host.startsWith(".") || host.endsWith(".")) return null;
+        return t;
+    }
+
+    // Si no hay nombre, usa el de la direccion (por ejemplo: Telefuturo).
+    private String nombreDesdeUrl(String url) {
+        String host = Uri.parse(url).getHost();
+        if (host == null) return url;
+        if (host.startsWith("www.")) host = host.substring(4);
+        int punto = host.indexOf('.');
+        String base = punto > 0 ? host.substring(0, punto) : host;
+        if (base.isEmpty()) return host;
+        return base.substring(0, 1).toUpperCase(Locale.ROOT) + base.substring(1);
     }
 
     // Guarda el sitio y deja listo su icono (el elegido o el de la pagina).
     private void guardar() {
-        final String nombre = campoNombre.getText().toString().trim();
         final String url = normalizar(campoUrl.getText().toString());
-        if (nombre.isEmpty()) {
-            campoNombre.setError("Escribe un nombre");
-            return;
-        }
         if (url == null) {
             campoUrl.setError("La dirección no es válida");
             return;
         }
-        manejador.removeCallbacks(consultar);
+        String escrito = campoNombre.getText().toString().trim();
+        final String nombre = escrito.isEmpty() ? nombreDesdeUrl(url) : escrito;
+        cancelarBusqueda();
+        findViewById(R.id.btnGuardar).setEnabled(false);
 
         final String propio = iconoPropio;
         final boolean forzarWeb = refrescarWeb;

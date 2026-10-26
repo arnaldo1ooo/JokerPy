@@ -54,3 +54,10 @@ Build > Build Bundle(s) / APK(s) > Build APK(s). Queda en `app/build/outputs/apk
 
 ## Versión 1.3.1
 - Se quitó la opción de PIN.
+
+## Versión 1.3.2
+- Corregido: la barra de estado y los botones del sistema ya no tapan el título, los íconos ni el botón Agregar sitio.
+
+## Correcciones recientes
+- Agregar sitio: la búsqueda del título e icono ya no deja la pantalla esperando. Tiene tiempo límite, se cancela al guardar y, si no hay nombre, se usa el de la dirección.
+- Agregar sitio: ahora se ve una barra de carga bajo la dirección y un círculo girando sobre el icono mientras se busca el título.
