@@ -1,4 +1,4 @@
-# JokerPy
+# LoboPlay
 
 App Android (celular y Android TV) para guardar tus sitios favoritos en un menú.
 
@@ -13,7 +13,7 @@ App Android (celular y Android TV) para guardar tus sitios favoritos en un menú
 
 ## Cómo levantarlo (Android Studio)
 1. Instala Android Studio (la versión actual, gratis).
-2. Abre Android Studio > Open > elige la carpeta `JokerPy`.
+2. Abre Android Studio > Open > elige la carpeta `LoboPlay`.
 3. Espera a que termine "Gradle sync" (la primera vez descarga cosas, puede tardar unos minutos).
 4. Arriba, en el selector de dispositivos, elige uno:
    - Tu celular con "Depuración USB" activada, o
@@ -33,9 +33,16 @@ Build > Build Bundle(s) / APK(s) > Build APK(s). Queda en `app/build/outputs/apk
 - Revisa que cada URL de `canales.json` sea la página oficial del canal.
 - Cambia `applicationId` en `app/build.gradle` si quieres otro identificador.
 
+## Versión 1.4.0 — ahora es LoboPlay
+- Nuevo nombre: **LoboPlay** (proyecto, paquete `py.loboplay.app`, tema y archivo de respaldo `loboplay-sitios.json`).
+- Nuevo logo (lobo con botón de play) en el icono de la app, el banner de Android TV y el menú principal.
+- Colores nuevos acordes al logo: azul eléctrico y cian; el tema oscuro usa azul noche.
+- Importante: al cambiar el identificador (`py.loboplay.app`) Android lo instala como una app nueva. Para pasar tus sitios desde JokerPy, usa Ajustes > Respaldo > Exportar en la versión vieja e Importar en esta.
+- Los archivos del logo están en la carpeta `diseno/` (icono de 512 px para tiendas y logo original).
+
 ## Novedades de la versión 1.1
 - Diseño más moderno: tarjetas redondeadas, logo en el menú, botón flotante "Agregar sitio", chips Todos/Favoritos y buscador redondeado.
-- El título JokerPy ya no se corta (los botones de texto pasaron a íconos).
+- El título LoboPlay ya no se corta (los botones de texto pasaron a íconos).
 - Botón de retroceder en el navegador interno (con recargar y cerrar), y flecha de volver en Agregar y Ajustes.
 - Tema oscuro automático y foco más visible con el control remoto.
 
