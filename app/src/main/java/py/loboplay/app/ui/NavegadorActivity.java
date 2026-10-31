@@ -37,7 +37,12 @@ import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
 import java.io.ByteArrayInputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 import py.loboplay.app.R;
 import py.loboplay.app.util.Ajustes;
@@ -49,6 +54,45 @@ import py.loboplay.app.util.Bordes;
 public class NavegadorActivity extends AppCompatActivity {
     public static final String EXTRA_URL = "url";
     public static final String EXTRA_ESCRITORIO = "escritorio";
+    public static final String EXTRA_PANTALLA_COMPLETA = "pantallaCompleta";
+
+    // Codigo comun: encuentra el reproductor (un video, o si no un marco grande con video).
+    private static final String JS_COMUN = "function lpBuscar(){"
+            + "var vs=[].slice.call(document.querySelectorAll('video'));"
+            + "vs.sort(function(a,b){return b.clientWidth*b.clientHeight-a.clientWidth*a.clientHeight;});"
+            + "var fs=[].slice.call(document.querySelectorAll('iframe')).filter(function(f){"
+            + "return f.clientWidth>=400&&f.clientHeight>=220;});"
+            + "fs.sort(function(a,b){return b.clientWidth*b.clientHeight-a.clientWidth*a.clientHeight;});"
+            + "var v=vs[0],f=fs[0];"
+            + "var t=(v&&(v.clientWidth>0||v.readyState>0))?v:(f||v);"
+            + "return {t:t,v:(t&&t.tagName==='VIDEO')?t:null,nv:vs.length,nf:fs.length};}";
+
+    // Solo mira: devuelve que encontro (para saber si ya hay reproductor).
+    private static final String JS_BUSCAR = "(function(){" + JS_COMUN
+            + "var r=lpBuscar();return JSON.stringify({ok:!!r.t,tipo:r.t?r.t.tagName:'',nv:r.nv,nf:r.nf});})()";
+
+    // Estira el reproductor para que ocupe toda la pantalla y lo reproduce.
+    // Se repite cada segundo y medio por si la pagina lo acomoda de nuevo.
+    private static final String JS_INMERSIVO = "(function(){" + JS_COMUN
+            + "function poner(e,k,v){e.style.setProperty(k,v,'important');}"
+            + "function ver(){var r=lpBuscar();var t=r.t;if(!t)return false;"
+            + "poner(t,'position','fixed');poner(t,'top','0');poner(t,'left','0');"
+            + "poner(t,'width','100vw');poner(t,'height','100vh');poner(t,'max-width','none');"
+            + "poner(t,'max-height','none');poner(t,'margin','0');poner(t,'padding','0');"
+            + "poner(t,'border','0');poner(t,'z-index','2147483647');poner(t,'background','#000');"
+            + "poner(t,'object-fit','contain');poner(t,'transform','none');"
+            + "for(var p=t.parentElement;p&&p!==document.body;p=p.parentElement){"
+            + "poner(p,'transform','none');poner(p,'filter','none');poner(p,'perspective','none');"
+            + "poner(p,'contain','none');poner(p,'overflow','visible');}"
+            + "poner(document.documentElement,'overflow','hidden');"
+            + "poner(document.body,'overflow','hidden');poner(document.body,'background','#000');"
+            + "if(r.v){try{r.v.muted=false;if(r.v.paused)r.v.play();}catch(e){}}"
+            + "return true;}"
+            + "if(!ver())return 'no';"
+            + "if(!window.__lpInmersivo){window.__lpInmersivo=setInterval(ver,1500);}"
+            + "return 'ok';})()";
+
+    private static final int MAX_BUSQUEDAS = 40;   // una por segundo
 
     private static final String AGENTE_ESCRITORIO =
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
@@ -60,6 +104,7 @@ public class NavegadorActivity extends AppCompatActivity {
     private TextView titulo;
     private WebView web;
     private ProgressBar progreso;
+    private View portada;
     private View vistaCompleta;
     private WebChromeClient.CustomViewCallback avisoCompleta;
 
@@ -67,6 +112,12 @@ public class NavegadorActivity extends AppCompatActivity {
     private View btnCursor;
     private boolean esTv;
     private boolean cursorActivo;
+
+    // Pantalla completa automatica (canales de TV)
+    private boolean autoCompleta;
+    private int busquedas;
+    private boolean inmersivo;      // el reproductor ya ocupa toda la pantalla
+    private TextView estadoPortada;
     private final Handler manejador = new Handler(Looper.getMainLooper());
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -95,6 +146,7 @@ public class NavegadorActivity extends AppCompatActivity {
         web = findViewById(R.id.web);
         progreso = findViewById(R.id.progreso);
         btnCursor = findViewById(R.id.btnCursor);
+        portada = findViewById(R.id.portada);
 
         titulo.setText(nombreCorto(url));
         findViewById(R.id.btnAtras).setOnClickListener(v -> retroceder());
@@ -163,6 +215,7 @@ public class NavegadorActivity extends AppCompatActivity {
                 contenedor.addView(vista, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                 panel.setVisibility(View.GONE);
+                portada.setVisibility(View.GONE);
                 barrasDelSistema(false);
             }
 
@@ -188,8 +241,94 @@ public class NavegadorActivity extends AppCompatActivity {
         prepararImagenEnImagen();
         prepararCursor();
 
-        web.loadUrl(url);
+        autoCompleta = getIntent().getBooleanExtra(EXTRA_PANTALLA_COMPLETA, false);
+        if (autoCompleta) {
+            // Tapa la pagina con el logo hasta que el video quede en pantalla completa.
+            estadoPortada = findViewById(R.id.estadoPortada);
+            portada.setVisibility(View.VISIBLE);
+            portada.setOnClickListener(v -> abandonarAutomatico());
+            barrasDelSistema(false);
+            manejador.postDelayed(this::buscarReproductor, 1500);
+        }
+
+        // Algunos reproductores solo abren si creen que los llama la pagina del canal.
+        if (url.contains("desdepylabs.com")) {
+            Map<String, String> cabeceras = new HashMap<>();
+            cabeceras.put("Referer", "https://www.telefuturo.com.py/envivo");
+            web.loadUrl(url, cabeceras);
+        } else {
+            web.loadUrl(url);
+        }
         web.requestFocus();
+    }
+
+    // ---------- pantalla completa automatica ----------
+
+    // Espera a que aparezca el reproductor y lo estira a toda la pantalla, sin que el usuario toque nada.
+    private void buscarReproductor() {
+        if (!autoCompleta || inmersivo || isFinishing() || isDestroyed()) return;
+        if (busquedas++ >= MAX_BUSQUEDAS) {
+            abandonarAutomatico();
+            Toast.makeText(this, "No se encontró el reproductor en la página", Toast.LENGTH_LONG).show();
+            return;
+        }
+        web.evaluateJavascript(JS_BUSCAR, valor -> {
+            if (!autoCompleta || inmersivo) return;
+            String texto = textoJs(valor);
+            try {
+                JSONObject o = new JSONObject(texto);
+                if (o.getBoolean("ok")) {
+                    entrarInmersivo(o.getString("tipo"));
+                    return;
+                }
+                if (busquedas >= 6) {
+                    estadoPortada.setText("Buscando el reproductor… (videos: " + o.optInt("nv")
+                            + ", marcos: " + o.optInt("nf") + ")\nToca la pantalla para ver la página");
+                }
+            } catch (Exception ignorado) {
+                // la pagina todavia no esta lista
+            }
+            manejador.postDelayed(this::buscarReproductor, 1000);
+        });
+    }
+
+    // Pone el reproductor a pantalla completa dentro de la pagina y oculta lo demas.
+    private void entrarInmersivo(String tipo) {
+        web.evaluateJavascript(JS_INMERSIVO, valor -> {
+            if (!autoCompleta || inmersivo) return;
+            if (!"ok".equals(textoJs(valor))) {
+                manejador.postDelayed(this::buscarReproductor, 1000);
+                return;
+            }
+            inmersivo = true;
+            barra.setVisibility(View.GONE);
+            portada.setVisibility(View.GONE);
+            barrasDelSistema(false);
+            web.requestFocus();
+            // Si el reproductor es un marco (otra pagina), un toque en el centro lo inicia.
+            if ("IFRAME".equals(tipo)) {
+                manejador.postDelayed(() -> tocarEn(web.getWidth() / 2f, web.getHeight() / 2f), 800);
+            }
+        });
+    }
+
+    // Si no se logra (o el usuario toca la portada), muestra la pagina normal.
+    private void abandonarAutomatico() {
+        autoCompleta = false;
+        portada.setVisibility(View.GONE);
+        barra.setVisibility(View.VISIBLE);
+        barrasDelSistema(true);
+    }
+
+    // Convierte lo que devuelve evaluateJavascript (texto JSON) en un String normal.
+    private static String textoJs(String valor) {
+        if (valor == null || "null".equals(valor)) return "";
+        try {
+            Object o = new JSONTokener(valor).nextValue();
+            return o instanceof String ? (String) o : "";
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     // ---------- imagen en imagen ----------
@@ -239,7 +378,7 @@ public class NavegadorActivity extends AppCompatActivity {
     @Override
     public void onPictureInPictureModeChanged(boolean enPip, Configuration config) {
         super.onPictureInPictureModeChanged(enPip, config);
-        if (barra != null) barra.setVisibility(enPip ? View.GONE : View.VISIBLE);
+        if (barra != null) barra.setVisibility(enPip || inmersivo ? View.GONE : View.VISIBLE);
         if (cursor != null) cursor.setVisibility(enPip ? View.GONE : (cursorActivo ? View.VISIBLE : View.GONE));
     }
 
@@ -283,6 +422,12 @@ public class NavegadorActivity extends AppCompatActivity {
     // Maneja las flechas y OK del control remoto cuando el cursor esta activo.
     @Override
     public boolean dispatchKeyEvent(KeyEvent ev) {
+        // Con la portada puesta, OK o Enter muestran la pagina normal.
+        if (portada != null && portada.getVisibility() == View.VISIBLE && ev.getAction() == KeyEvent.ACTION_UP
+                && (ev.getKeyCode() == KeyEvent.KEYCODE_DPAD_CENTER || ev.getKeyCode() == KeyEvent.KEYCODE_ENTER)) {
+            abandonarAutomatico();
+            return true;
+        }
         if (cursor != null && cursorActivo && vistaCompleta == null && !enPip()) {
             int tecla = ev.getKeyCode();
             boolean flecha = tecla == KeyEvent.KEYCODE_DPAD_UP || tecla == KeyEvent.KEYCODE_DPAD_DOWN
@@ -337,8 +482,11 @@ public class NavegadorActivity extends AppCompatActivity {
 
     // Hace un toque en el lugar donde esta el cursor.
     private void tocarConCursor() {
-        final float x = cursor.getPosX();
-        final float y = cursor.getPosY();
+        tocarEn(cursor.getPosX(), cursor.getPosY());
+    }
+
+    // Toque sobre la pagina en la posicion dada (sirve aunque la portada la tape).
+    private void tocarEn(final float x, final float y) {
         long t = SystemClock.uptimeMillis();
         MotionEvent abajo = MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x, y, 0);
         web.dispatchTouchEvent(abajo);
@@ -355,7 +503,10 @@ public class NavegadorActivity extends AppCompatActivity {
 
     // Vuelve a la pagina anterior, o cierra el navegador si no hay mas.
     private void retroceder() {
-        if (vistaCompleta != null) {
+        if (inmersivo) {
+            // En los canales con pantalla completa automatica, atras cierra el canal.
+            finish();
+        } else if (vistaCompleta != null) {
             salirPantallaCompleta();
         } else if (web.canGoBack()) {
             web.goBack();

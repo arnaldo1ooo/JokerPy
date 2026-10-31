@@ -10,7 +10,7 @@ import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 // Base de datos local de la app.
-@Database(entities = {Sitio.class}, version = 2, exportSchema = false)
+@Database(entities = {Sitio.class}, version = 3, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
 
     public abstract SitioDao sitioDao();
@@ -27,6 +27,13 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    private static final Migration DE_2_A_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            db.execSQL("ALTER TABLE sitio ADD COLUMN pantallaCompleta INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
     // Devuelve la unica base de datos de la app.
     public static AppDatabase get(Context ctx) {
         if (instancia == null) {
@@ -34,7 +41,7 @@ public abstract class AppDatabase extends RoomDatabase {
                 if (instancia == null) {
                     instancia = Room.databaseBuilder(
                                     ctx.getApplicationContext(), AppDatabase.class, "loboplay.db")
-                            .addMigrations(DE_1_A_2)
+                            .addMigrations(DE_1_A_2, DE_2_A_3)
                             .build();
                 }
             }

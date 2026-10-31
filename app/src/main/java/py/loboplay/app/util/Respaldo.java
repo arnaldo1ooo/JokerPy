@@ -36,6 +36,7 @@ public final class Respaldo {
             o.put("url", s.url);
             o.put("favorito", s.favorito);
             o.put("escritorio", s.escritorio);
+            o.put("pantallaCompleta", s.pantallaCompleta);
             arreglo.put(o);
         }
         JSONObject raiz = new JSONObject();
@@ -82,6 +83,7 @@ public final class Respaldo {
             s.url = url;
             s.favorito = o.optBoolean("favorito", false);
             s.escritorio = o.optBoolean("escritorio", false);
+            s.pantallaCompleta = o.optBoolean("pantallaCompleta", false);
             s.orden = ++siguienteOrden;
             nuevos.add(dao.insertar(s));
         }

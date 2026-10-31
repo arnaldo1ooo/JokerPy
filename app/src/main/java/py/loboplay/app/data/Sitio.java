@@ -19,6 +19,9 @@ public class Sitio {
     public boolean escritorio; // abrir como pagina de escritorio
 
     @ColumnInfo(defaultValue = "0")
+    public boolean pantallaCompleta; // al abrir, reproduce y pone el video en pantalla completa
+
+    @ColumnInfo(defaultValue = "0")
     public long orden;         // posicion elegida por el usuario
 
     @ColumnInfo(defaultValue = "0")

@@ -240,6 +240,7 @@ public class MainActivity extends AppCompatActivity implements SitioAdapter.List
         Intent i = new Intent(this, NavegadorActivity.class);
         i.putExtra(NavegadorActivity.EXTRA_URL, sitio.url);
         i.putExtra(NavegadorActivity.EXTRA_ESCRITORIO, sitio.escritorio);
+        i.putExtra(NavegadorActivity.EXTRA_PANTALLA_COMPLETA, sitio.pantallaCompleta);
         startActivity(i);
     }
 

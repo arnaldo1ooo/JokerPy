@@ -1,10 +1,6 @@
 [
-  { "nombre": "Telefuturo", "url": "https://www.telefuturo.com.py/envivo" },
-  { "nombre": "SNT", "url": "https://www.snt.com.py/envivo/" },
+  { "nombre": "Telefuturo", "url": "https://www.desdepylabs.com/External/tvaccion/telefuturo", "pantallaCompleta": true },
+  { "nombre": "SNT", "url": "https://www.snt.com.py/envivo/", "pantallaCompleta": true },
   { "nombre": "Trece", "url": "https://www.trece.com.py" },
-  { "nombre": "Unicanal", "url": "https://www.unicanal.com.py" },
-  { "nombre": "La Tele", "url": "https://www.latele.com.py" },
-  { "nombre": "Paravisión", "url": "https://www.paravision.com.py" },
-  { "nombre": "Paraguay TV", "url": "https://www.paraguaytv.gov.py" },
-  { "nombre": "Red Guaraní", "url": "https://www.redguarani.com.py" }
+  { "nombre": "Unicanal", "url": "https://www.unicanal.com.py" }
 ]

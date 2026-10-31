@@ -40,6 +40,12 @@ Build > Build Bundle(s) / APK(s) > Build APK(s). Queda en `app/build/outputs/apk
 - Importante: al cambiar el identificador (`py.loboplay.app`) Android lo instala como una app nueva. Para pasar tus sitios desde JokerPy, usa Ajustes > Respaldo > Exportar en la versión vieja e Importar en esta.
 - Los archivos del logo están en la carpeta `diseno/` (icono de 512 px para tiendas y logo original).
 
+## Pantalla completa automática (canales)
+- Nuevo interruptor por sitio: "Reproducir en pantalla completa al abrir" (Agregar/Editar sitio).
+- Al abrir el sitio se muestra el logo, la app busca el reproductor, lo reproduce y lo pasa a pantalla completa sola.
+- Atrás cierra el canal y vuelve al menú. Si no encuentra el reproductor en unos 40 segundos, muestra la página normal.
+- Los canales precargados vienen con esta opción activada. La opción se guarda también en el respaldo.
+
 ## Novedades de la versión 1.1
 - Diseño más moderno: tarjetas redondeadas, logo en el menú, botón flotante "Agregar sitio", chips Todos/Favoritos y buscador redondeado.
 - El título LoboPlay ya no se corta (los botones de texto pasaron a íconos).
